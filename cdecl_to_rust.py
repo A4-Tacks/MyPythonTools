@@ -122,7 +122,7 @@ def english_to_rs(tokens: list[str]) -> str:
                 num_text = get()
                 if num_text == "of":
                     # non size array
-                    return FmtNode("&[{}]", build())
+                    return FmtNode("[{}]", build())
                 num = int(num_text)
                 assert_eq(get(), "of")
                 return FmtNode("[{}; {}]", build(), num)
