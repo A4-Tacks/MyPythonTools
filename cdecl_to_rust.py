@@ -248,8 +248,13 @@ def rs_to_english(input_tokens: list[str]) -> str:
                         "function ({}) returning {}",
                         LazyStr(lambda: ", ".join(map(str, params))),
                         build())
-            case name:
-                return FmtNode("{}", name)
+            case ("struct" | "union" | "enum" | "const" | "volatile" | "noalias") as type_:
+                assert_eq(get(), "(")
+                value = build()
+                assert_eq(get(), ")")
+                return FmtNode(f"{type_} {{}}", value)
+            case value:
+                return FmtNode("{}", value)
         return FmtNode("")
 
     var_name = get()
