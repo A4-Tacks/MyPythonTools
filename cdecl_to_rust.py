@@ -255,10 +255,9 @@ def rs_to_english(input_tokens: list[str]) -> str:
                 return FmtNode(f"{type_} {{}}", value)
             case value:
                 return FmtNode("{}", value)
-        return FmtNode("")
 
     var_name = get()
-    
+
     match get():
         case ":":
             # define
@@ -273,15 +272,21 @@ def rs_to_english(input_tokens: list[str]) -> str:
     return str(root)
 
 
+def test() -> None:
+    """test function"""
+    # lazy import
+    import sys  # pylint: disable=import-outside-toplevel
+    from os import popen  # pylint: disable=import-outside-toplevel
+
+    cdecl_bin = r"/bin/cdecl"
+
+    result = english_to_rs(split_tokens(" ".join(sys.argv[1:])))
+    print(result)
+    cdecl_text = rs_to_english(split_tokens(result))
+    print(cdecl_text)
+    with popen(cdecl_bin, mode="w") as proc:
+        print(cdecl_text, file=proc, flush=True)
+
+
 if __name__ == '__main__':
-    import sys
-    from os import popen
-
-    CDECL_BIN = r"/bin/cdecl"
-
-    RESULT = english_to_rs(split_tokens(" ".join(sys.argv[1:])))
-    print(RESULT)
-    CDECL = rs_to_english(split_tokens(RESULT))
-    print(CDECL)
-    with popen(CDECL_BIN, mode="w") as proc:
-        print(CDECL, file=proc, flush=True)
+    test()
