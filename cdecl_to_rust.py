@@ -13,7 +13,7 @@ bsd_signal: fn(int, *fn(int) -> void) -> *fn(int) -> void
 ```
 """
 
-from typing import *
+from typing import Any, Self, Optional
 from itertools import chain
 
 
@@ -150,7 +150,7 @@ def english_to_rs(tokens: list[str]) -> str:
     return str(root)
 
 
-import sys
-
 if __name__ == '__main__':
+    import sys
+
     print(english_to_rs(split_tokens(" ".join(sys.argv[1:]))))
