@@ -17,15 +17,6 @@ from typing import Any, Self, Optional
 from itertools import chain
 
 
-syntax: str = (
-        "declare fun as function ("
-        "pointer to pointer to function ("
-        "array 6 of array 2 of pointer to pointer to int, int, float"
-        ") returning float"
-        ") returning int"
-        )
-
-
 EMPTYS = set(" \t\r\n")
 SPLITS = set(chain(r""""#$%&'()*+,-./:;<=>?@[\]^`{|}~""", EMPTYS))
 
