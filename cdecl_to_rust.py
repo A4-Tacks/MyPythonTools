@@ -15,7 +15,7 @@ bsd_signal: fn(int, *fn(int) -> void) -> *fn(int) -> void
 注意: 目前发现变量名 func 在 cdecl 会触发语法错误
 """
 
-from typing import Any, Self, Optional
+from typing import Any, Callable, Generic, Self, Optional, TypeVar
 from re import findall, escape
 
 
@@ -39,7 +39,7 @@ class FmtNode:
     def __repr__(self) -> str:
         """__repr__
         """
-        return f"{self.__class__.__name__}({repr(self.fmtter)}, {self.args})"
+        return f"{self.__class__.__name__}({self.fmtter!r}, {self.args})"
 
 
 EMPTYS = r" \t\r\n"
@@ -79,33 +79,58 @@ def dbg(target):
     return inner
 
 
-def english_to_rs(tokens: list[str]) -> str:
-    """english_to_rs
-    input: declare <name> as <english>
+T = TypeVar("T")
+class Tokens(Generic[T]):
+    """用于遍历及预查的类
     """
-    length = len(tokens)
-    if length < 4:
-        raise ValueError(f"length < 4, {tokens}")
-    idx = [0]
+    def __init__(self, data: list[T] | tuple[T]):
+        self.data: list[T] | tuple[T] = data
+        self.idx: int = 0
 
-    def get() -> str:
-        res = tokens[idx[0]]
-        idx[0] += 1
+    def get(self) -> T:
+        """get next value and index next
+        """
+        res = self.data[self.idx]
+        self.idx += 1
         return res
 
-    def get_next(step: int = 1) -> Optional[str]:
-        if idx[0] + step < length:
-            return tokens[idx[0]]
-        return None
+    def get_next(self, step: int = 0) -> Optional[T]:
+        """get_next
+        """
+        try:
+            return self.data[self.idx + step]
+        except IndexError:
+            return None
+
+    def check_to_end(self, raise_fun: Callable[[], BaseException]) -> None:
+        """check
+        """
+        if self.idx != len(self.data):
+            raise raise_fun()
+
+
+def english_to_rs(input_tokens: list[str]) -> str:
+    """english_to_rs
+    input:
+    `declare <name> as <english>` or `cast <name> into <english>`
+    """
+    length = len(input_tokens)
+    if length < 4:
+        raise ValueError(f"length < 4, {input_tokens}")
+
+    tokens = Tokens(input_tokens)
+
+    def get() -> str:
+        return tokens.get()
 
     def build() -> FmtNode:
         match get():
             case "function":
                 assert_eq(get(), "(")
                 params: list[FmtNode] = []
-                while get_next() != ")":
+                while tokens.get_next() != ")":
                     params.append(build())
-                    if get_next() == ",":
+                    if tokens.get_next() == ",":
                         assert_eq(get(), ",")
                 assert_eq(get(), ")")
                 assert_eq(get(), "returning")
@@ -126,25 +151,83 @@ def english_to_rs(tokens: list[str]) -> str:
             case token:
                 return FmtNode("{}", token)
 
+    def check_builded(root: FmtNode) -> None:
+        tokens.check_to_end(lambda: AssertionError(
+            f"Not fully build: ({root}): {' '.join(tokens.data)!r}"))
+
     match get():
         case "declare":
             var_name: str = get()
             assert_eq(get(), "as")
             root: FmtNode = FmtNode("{}: {}", var_name, build())
-            if not idx[0] == length:
-                raise AssertionError(
-                        f"Not fully build: ({root}): {repr(' '.join(tokens))}")
-            return str(root)
         case "cast":
             var_name: str = get()
             assert_eq(get(), "into")
             root: FmtNode = FmtNode("{} as {}", var_name, build())
-            if not idx[0] == length:
-                raise AssertionError(
-                        f"Not fully build: ({root}): {repr(' '.join(tokens))}")
-            return str(root)
         case head:
             raise AssertionError(f"{head} no pattern")
+
+    check_builded(root)
+    return str(root)
+
+
+def rs_to_english(input_tokens: list[str]) -> str:
+    """rs to english
+    """
+    length = len(input_tokens)
+    if length < 3:
+        raise ValueError(f"length < 3, {input_tokens}")
+    tokens = Tokens(input_tokens)
+
+    def check_builded(root: FmtNode) -> None:
+        tokens.check_to_end(lambda: AssertionError(
+            f"Not fully build: ({root}): {' '.join(tokens.data)!r}"))
+
+    def get() -> str:
+        return tokens.get()
+
+    def build() -> FmtNode:
+        """通用构建树"""
+        match get():
+            case "[":
+                # array
+                type_ = build()
+                match get():
+                    case ";":
+                        # sized array
+                        num = int(get())
+                        assert_eq(get(), "]")
+                        return FmtNode("array {} of {}", num, type_)
+                    case "]":
+                        # non size array
+                        return FmtNode("array of {}", type_)
+                    case end:
+                        raise AssertionError(
+                                "array format error, need ';' or ']', "
+                                f"found {end!r}")
+            case "*":
+                return FmtNode("pointer to {}", build())
+            case "fn":
+                assert_eq(get(), "(")
+                while tokens.get_next():
+                    pass
+            case name:
+                return FmtNode("{}", name)
+        return FmtNode("")
+
+    var_name = get()
+    
+    match get():
+        case ":":
+            # define
+            root = FmtNode("declare {} as {}", var_name, build())
+        case "as":
+            # type into
+            root = FmtNode("cast {} into {}", var_name, build())
+        case head:
+            raise AssertionError(f"{head} no pattern")
+
+    return str(root)
 
 
 if __name__ == '__main__':
@@ -152,3 +235,4 @@ if __name__ == '__main__':
 
     RESULT = english_to_rs(split_tokens(" ".join(sys.argv[1:])))
     print(RESULT)
+    #print(rs_to_english(split_tokens(RESULT)))
