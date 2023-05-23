@@ -131,14 +131,25 @@ def english_to_rs(tokens: list[str]) -> str:
             case token:
                 return FmtNode("{}", token)
 
-    assert_eq(get(), "declare")
-    var_name: str = get()
-    assert_eq(get(), "as")
-    root: FmtNode = FmtNode("{}: {}", var_name, build())
-    if not idx[0] == length:
-        raise AssertionError(
-                f"Not fully build: ({root}): {repr(' '.join(tokens))}")
-    return str(root)
+    match get():
+        case "declare":
+            var_name: str = get()
+            assert_eq(get(), "as")
+            root: FmtNode = FmtNode("{}: {}", var_name, build())
+            if not idx[0] == length:
+                raise AssertionError(
+                        f"Not fully build: ({root}): {repr(' '.join(tokens))}")
+            return str(root)
+        case "cast":
+            var_name: str = get()
+            assert_eq(get(), "into")
+            root: FmtNode = FmtNode("{} as {}", var_name, build())
+            if not idx[0] == length:
+                raise AssertionError(
+                        f"Not fully build: ({root}): {repr(' '.join(tokens))}")
+            return str(root)
+        case head:
+            raise AssertionError(f"{head} no pattern")
 
 
 if __name__ == '__main__':
