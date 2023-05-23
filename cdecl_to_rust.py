@@ -42,6 +42,29 @@ class FmtNode:
         return f"{self.__class__.__name__}({self.fmtter!r}, {self.args})"
 
 
+class LazyStr:
+    """惰性初始化的字符串"""
+    def __init__(self, data: Callable[[], str]):
+        self.initer = data
+        self.__inited = False
+        self.__dataed: Optional[str] = None
+
+    def __str__(self) -> str:
+        """__str__"""
+        if not self.__inited:
+            self.__dataed = self.initer()
+            self.__inited = True
+        return self.__dataed  # type: ignore
+
+    def __repr__(self) -> str:
+        """__repr__"""
+        if self.__inited:
+            value = f"inited: {self.__dataed!r}"
+        else:
+            value = f"noinit: {self.initer!r}"
+        return f"{self.__class__.__name__}({value})"
+
+
 EMPTYS = r" \t\r\n"
 LONG_SPLITS = ["->"]  # 单独成一个token的字符串, 必须完全由单分隔字符组成
 LONG_SPLITS.sort(key=len, reverse=True)  # 长度必须为递减
@@ -134,7 +157,10 @@ def english_to_rs(input_tokens: list[str]) -> str:
                         assert_eq(get(), ",")
                 assert_eq(get(), ")")
                 assert_eq(get(), "returning")
-                return FmtNode("fn({}) -> {}", ", ".join(map(str, params)), build())
+                return FmtNode(
+                        "fn({}) -> {}",
+                        LazyStr(lambda: ", ".join(map(str, params))),
+                        build())
             case "pointer":
                 assert_eq(get(), "to")
                 return FmtNode("*{}", build())
@@ -209,8 +235,19 @@ def rs_to_english(input_tokens: list[str]) -> str:
                 return FmtNode("pointer to {}", build())
             case "fn":
                 assert_eq(get(), "(")
-                while tokens.get_next():
-                    pass
+                params: list[FmtNode] = []
+                while tokens.get_next() != ")":
+                    # 循环代表未结束 (type[,])
+                    params.append(build())
+                    if tokens.get_next() == ",":
+                        # 消耗时顺便断言检测下是否内部出错
+                        assert_eq(tokens.get(), ",")
+                assert_eq(get(), ")")
+                assert_eq(get(), "->")
+                return FmtNode(
+                        "function ({}) returning {}",
+                        LazyStr(lambda: ", ".join(map(str, params))),
+                        build())
             case name:
                 return FmtNode("{}", name)
         return FmtNode("")
@@ -227,12 +264,19 @@ def rs_to_english(input_tokens: list[str]) -> str:
         case head:
             raise AssertionError(f"{head} no pattern")
 
+    check_builded(root)
     return str(root)
 
 
 if __name__ == '__main__':
     import sys
+    from os import popen
+
+    CDECL_BIN = r"/bin/cdecl"
 
     RESULT = english_to_rs(split_tokens(" ".join(sys.argv[1:])))
     print(RESULT)
-    #print(rs_to_english(split_tokens(RESULT)))
+    CDECL = rs_to_english(split_tokens(RESULT))
+    print(CDECL)
+    with popen(CDECL_BIN, mode="w") as proc:
+        print(CDECL, file=proc, flush=True)
