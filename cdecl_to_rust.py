@@ -15,8 +15,10 @@ bsd_signal: fn(int, *fn(int) -> void) -> *fn(int) -> void
 注意: 目前发现变量名 func 在 cdecl 会触发语法错误
 """
 
+import re
+
 from typing import Any, Callable, Generic, Self, Optional, TypeVar
-from re import findall, escape
+from re import Pattern, findall, escape
 
 
 class FmtNode:
@@ -76,12 +78,13 @@ IDENT_PAT = f"[^{EMPTYS}{SPLIT_CHARS}]+"
 SPLIT_FIND_REGEX = (
         fr"([{EMPTYS}]+)|({LONG_SPLIT_REGEX}"
         fr"|[{SPLIT_CHARS}]|{IDENT_PAT})")
+SPLIT_FIND_REGEX_OBJ: Pattern[str] = re.compile(SPLIT_FIND_REGEX)
 
 
 def split_tokens(source: str) -> list[str]:
     """简单的通用词法分割 (基于单长分割字符与单长空白字符)
     """
-    find_res = findall(SPLIT_FIND_REGEX, source)
+    find_res = SPLIT_FIND_REGEX_OBJ.findall(source)
     return [i[1] for i in find_res if i[1]]
 
 
