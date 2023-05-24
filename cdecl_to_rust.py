@@ -157,13 +157,13 @@ def english_to_rs(input_tokens: list[str]) -> str:
                         assert_eq(get(), ",")
                 assert_eq(get(), ")")
                 assert_eq(get(), "returning")
-                return FmtNode(
+                result = FmtNode(
                         "fn({}) -> {}",
                         LazyStr(lambda: ", ".join(map(str, params))),
                         build())
             case "pointer":
                 assert_eq(get(), "to")
-                return FmtNode("*{}", build())
+                result = FmtNode("*{}", build())
             case "array":
                 num_text = get()
                 if num_text == "of":
@@ -171,13 +171,13 @@ def english_to_rs(input_tokens: list[str]) -> str:
                     return FmtNode("[{}]", build())
                 num: int = int(num_text)
                 assert_eq(get(), "of")
-                return FmtNode("[{}; {}]", build(), num)
+                result = FmtNode("[{}; {}]", build(), num)
             case ("struct" | "union" | "enum"
                   | "const" | "volatile" | "noalias"
                   | "signed" | "unsigned" | "register"
                   | "static") as type_:
                 # 带括号的结构
-                return FmtNode(f"{type_}({{}})", build())
+                result = FmtNode(f"{type_}({{}})", build())
             case ("long" | "short") as type_:
                 # 整数修饰类
                 count = 1
@@ -190,9 +190,10 @@ def english_to_rs(input_tokens: list[str]) -> str:
                     if next_ == "int":
                         get()
                         return FmtNode(f"{' '.join((type_,) * count)} int")
-                    return FmtNode(f"{' '.join((type_,) * count)}")
+                    result = FmtNode(f"{' '.join((type_,) * count)}")
             case token:
-                return FmtNode("{}", token)
+                result = FmtNode("{}", token)
+        return result
 
     def check_builded(root: FmtNode) -> None:
         tokens.check_to_end(lambda: AssertionError(
@@ -208,7 +209,8 @@ def english_to_rs(input_tokens: list[str]) -> str:
             assert_eq(get(), "into")
             root: FmtNode = FmtNode("{} as {}", var_name, build())
         case head:
-            raise AssertionError(f"{head} no pattern")
+            raise AssertionError(
+                    f"{head!r} no pattern, ({' '.join(input_tokens)})")
 
     check_builded(root)
     return str(root)
@@ -240,16 +242,16 @@ def rs_to_english(input_tokens: list[str]) -> str:
                         # sized array
                         num = int(get())
                         assert_eq(get(), "]")
-                        return FmtNode("array {} of {}", num, type_)
+                        result = FmtNode("array {} of {}", num, type_)
                     case "]":
                         # non size array
-                        return FmtNode("array of {}", type_)
+                        result = FmtNode("array of {}", type_)
                     case end:
                         raise AssertionError(
                                 "array format error, need ';' or ']', "
                                 f"found {end!r}")
             case "*":
-                return FmtNode("pointer to {}", build())
+                result = FmtNode("pointer to {}", build())
             case "fn":
                 assert_eq(get(), "(")
                 params: list[FmtNode] = []
@@ -261,7 +263,7 @@ def rs_to_english(input_tokens: list[str]) -> str:
                         assert_eq(tokens.get(), ",")
                 assert_eq(get(), ")")
                 assert_eq(get(), "->")
-                return FmtNode(
+                result = FmtNode(
                         "function ({}) returning {}",
                         LazyStr(lambda: ", ".join(map(str, params))),
                         build())
@@ -271,7 +273,7 @@ def rs_to_english(input_tokens: list[str]) -> str:
                 assert_eq(get(), "(")
                 value = build()
                 assert_eq(get(), ")")
-                return FmtNode(f"{type_} {{}}", value)
+                result = FmtNode(f"{type_} {{}}", value)
             case ("long" | "short") as type_:
                 count = 1
                 while True:
@@ -283,9 +285,10 @@ def rs_to_english(input_tokens: list[str]) -> str:
                     if next_ == "int":
                         get()
                         return FmtNode(f"{' '.join((type_,) * count)} int")
-                    return FmtNode(f"{' '.join((type_,) * count)}")
+                    result = FmtNode(f"{' '.join((type_,) * count)}")
             case value:
-                return FmtNode("{}", value)
+                result = FmtNode("{}", value)
+        return result
 
     var_name = get()
 
@@ -297,7 +300,8 @@ def rs_to_english(input_tokens: list[str]) -> str:
             # type into
             root = FmtNode("cast {} into {}", var_name, build())
         case head:
-            raise AssertionError(f"{head} no pattern")
+            raise AssertionError(
+                    f"{head!r} no pattern, ({' '.join(input_tokens)})")
 
     check_builded(root)
     return str(root)
