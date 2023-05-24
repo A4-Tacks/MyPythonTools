@@ -172,8 +172,10 @@ def english_to_rs(input_tokens: list[str]) -> str:
                 num: int = int(num_text)
                 assert_eq(get(), "of")
                 return FmtNode("[{}; {}]", build(), num)
-            case ("struct" | "union" | "enum" | "const"
-                  | "volatile" | "noalias" | "unsigned") as type_:
+            case ("struct" | "union" | "enum"
+                  | "const" | "volatile" | "noalias"
+                  | "signed" | "unsigned" | "register"
+                  | "static") as type_:
                 # 带括号的结构
                 return FmtNode(f"{type_}({{}})", build())
             case ("long" | "short") as type_:
@@ -263,8 +265,9 @@ def rs_to_english(input_tokens: list[str]) -> str:
                         "function ({}) returning {}",
                         LazyStr(lambda: ", ".join(map(str, params))),
                         build())
-            case ("struct" | "union" | "enum" | "const" | 
-                  "volatile" | "noalias" | "unsigned") as type_:
+            case ("struct" | "union" | "enum" | "const"
+                  | "volatile" | "noalias" | "signed" | "unsigned"
+                  | "register" | "static") as type_:
                 assert_eq(get(), "(")
                 value = build()
                 assert_eq(get(), ")")
