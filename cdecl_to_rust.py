@@ -278,17 +278,21 @@ def rs_to_english(input_tokens: list[str]) -> str:
                 assert_eq(get(), ")")
                 result = FmtNode(f"{type_} {{}}", value)
             case ("long" | "short") as type_:
+                # 多个长或短前缀整数
                 count = 1
                 while True:
                     next_ = tokens.get_next()
                     if next_ == type_:
+                        # continue
                         count += 1
                         get()
                         continue
                     if next_ == "int":
+                        # end int
                         get()
                         return FmtNode(f"{' '.join((type_,) * count)} int")
                     result = FmtNode(f"{' '.join((type_,) * count)}")
+                    break  # no end int
             case value:
                 result = FmtNode("{}", value)
         return result
