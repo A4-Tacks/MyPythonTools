@@ -1,0 +1,45 @@
+#!/usr/bin/python3
+# -*- coding: utf-8; -*-
+"""关键字正则前缀树"""
+
+from sys import stdin
+
+
+def build(kwds: list[str]):
+    root = {}
+    for kwd in kwds:
+        node = root
+        for c in kwd:
+            node = node.setdefault(c, {})
+        node[""] = {}
+    return root
+
+
+def grouped(s: str) -> str:
+    if len(s) == 1 or s.startswith("(") and s.endswith(")"):
+        return s
+    return f"(?:{s})"
+
+
+def to_re(root) -> str:
+    if not root:
+        return ""
+
+    if len(root) == 1:
+        k, v = next(iter(root.items()))
+        return k + to_re(v)
+
+    if root.get("") is not None:
+        root.pop("")
+        return grouped(to_re(root)) + "?"
+
+    return grouped("|".join(map(
+        lambda item: item[0] + to_re(item[1]),
+        root.items()
+    )))
+
+
+text = stdin.read()
+kwds = text.strip().split("\n")
+root = build(kwds)
+print(grouped(to_re(root)))
