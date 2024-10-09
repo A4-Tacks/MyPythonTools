@@ -45,6 +45,9 @@ class DoubleDict(Generic[KT, VT], MutableMapping[KT, VT], MappingView):
         res._backward = self._forward
         return res
 
+    def contains_value(self, value: VT) -> bool:
+        return value in self._backward
+
     def __contains__(self, key: KT) -> bool:
         return key in self._forward
 
