@@ -11,25 +11,23 @@ VT = TypeVar('VT', bound=Hashable)
 class DoubleDict(Generic[KT, VT], MutableMapping[KT, VT], MappingView):
     """
     >>> d = DoubleDict([(1, 2), (2, 3)])
-    >>> d
-    {1: 2, 2: 3}
-    >>> d.inverse()
-    {2: 1, 3: 2}
+    >>> d, d.inverse()
+    ({1: 2, 2: 3}, {2: 1, 3: 2})
     >>> d[1] = 3
-    >>> d
-    {1: 3}
-    >>> d.inverse()
-    {3: 1}
+    >>> d, d.inverse()
+    ({1: 3}, {3: 1})
     >>> d.inverse()[2] = 4
-    >>> d.inverse()
-    {3: 1, 2: 4}
-    >>> d
-    {1: 3, 4: 2}
+    >>> d, d.inverse()
+    ({1: 3, 4: 2}, {3: 1, 2: 4})
     >>> del d[1]
+    >>> d, d.inverse()
+    ({4: 2}, {2: 4})
+    >>> d[4] = 2
     >>> d
     {4: 2}
-    >>> d.inverse()
-    {2: 4}
+    >>> d[2] = 2
+    >>> d, d.inverse()
+    ({2: 2}, {2: 2})
     """
     _forward:  dict[KT, VT]
     _backward: dict[VT, KT]
@@ -54,7 +52,7 @@ class DoubleDict(Generic[KT, VT], MutableMapping[KT, VT], MappingView):
         return self._forward[key]
 
     def __setitem__(self, key: KT, value: VT) -> None:
-        if key == value and key in self: return
+        if key in self and value == self[key]: return
 
         if key in self._forward:
             del self._backward[self._forward[key]]
