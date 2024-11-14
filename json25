@@ -14,17 +14,18 @@ Option:
     -r, --reverse       convert json to json5
     -m, --minimal       show minimal format
     -i, --indent=<N>    indent width
+    -t, --tab           use tab indent char
     -h, --help          show this help
 """
 opts, args = getopt.getopt(
         sys.argv[1:],
-        'rmi:h',
-        ["reverse", "minimal", "indent=", "help"])
+        'rmi:th',
+        ["reverse", "minimal", "indent=", "tab", "help"])
 
 
 indent_ch = " "
 reverse = False
-indent = indent_ch * 2
+indent_count = 2
 sep = None
 
 for opt, opt_value in opts:
@@ -33,14 +34,18 @@ for opt, opt_value in opts:
             print(end=help_msg)
             exit()
         case '-m' | '--minimal':
-            indent = None
+            indent_count = None
             sep = ",", ":"
         case '-i' | '--indent':
             indent_count = int(opt_value)
             assert indent_count >= 0, f"{indent_count=} by lessthan zero"
-            indent = indent_ch * indent_count
+        case '-t' | '--tab':
+            indent_ch = "\t"
         case '-r' | '--reverse':
             reverse = True
+
+
+indent = None if indent_count is None else indent_ch * indent_count
 
 
 def json2json5(file) -> None:
