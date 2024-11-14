@@ -1,0 +1,69 @@
+#!/usr/bin/python3
+# -*- coding: utf-8; -*-
+"""Convert json5 to json"""
+
+import sys
+import getopt
+import json
+import json5
+
+help_msg = """\
+json25 [Option...] [--] [FILE...]
+
+Option:
+    -r, --reverse       convert json to json5
+    -m, --minimal       show minimal format
+    -i, --indent=<N>    indent width
+    -h, --help          show this help
+"""
+opts, args = getopt.getopt(
+        sys.argv[1:],
+        'rmi:h',
+        ["reverse", "minimal", "indent=", "help"])
+
+
+indent_ch = " "
+reverse = False
+indent = indent_ch * 2
+sep = None
+
+for opt, opt_value in opts:
+    match opt:
+        case '-h' | '--help':
+            print(end=help_msg)
+            exit()
+        case '-m' | '--minimal':
+            indent = None
+            sep = ",", ":"
+        case '-i' | '--indent':
+            indent_count = int(opt_value)
+            assert indent_count >= 0, f"{indent_count=} by lessthan zero"
+            indent = indent_ch * indent_count
+        case '-r' | '--reverse':
+            reverse = True
+
+
+def json2json5(file) -> None:
+    obj = json.load(file)
+    json5.dump(obj, sys.stdout, indent=indent, separators=sep)
+
+
+def json52json(file) -> None:
+    obj = json5.load(file)
+    json.dump(obj, sys.stdout, indent=indent, separators=sep)
+
+
+def convert_json(file) -> None:
+    if not reverse:
+        json2json5(file)
+    else:
+        json52json(file)
+    print(flush=True)
+
+
+for path in args or ["-"]:
+    if path == "-":
+        convert_json(sys.stdin)
+    else:
+        with open(path, "rb") as file:
+            convert_json(file)
