@@ -1,0 +1,138 @@
+#!/usr/bin/python3
+# -*- coding: utf-8; -*-
+"""自动化徒手开平方根算法"""
+
+from sys import argv, stderr
+from math import log10, floor
+from getopt import gnu_getopt
+
+if __name__ != '__main__':
+    raise AssertionError("Cannot be used as module")
+
+HELP_MSG = f"""\
+Usage: {argv[0]} [Options] <number...>
+Automatic calculation of manual square root steps.
+
+Options:
+    -s, --sqrt=<s>      Set sqrt symbol, e.g `/^:2` is uses `/^` and 2 en width
+    -d, --digit=<n>     Set the exact number of decimal places
+    -h, --help          Show this help message
+"""
+
+SQRT_SYM = "√"
+DIGITS = 4
+
+opts, args = gnu_getopt(argv[1:], 's:d:h', longopts=[
+    "sqrt=",
+    "digit=",
+    "help",
+])
+
+for opt, value in opts:
+    match opt:
+        case "-h" | "--help":
+            print(end=HELP_MSG)
+            exit()
+        case "-s" | "--sqrt":
+            SQRT_SYM = value
+        case "-d" | "--digit":
+            try:
+                DIGITS = int(value)
+            except ValueError as e:
+                print(f"{argv[0]}: {e}", file=stderr)
+                exit(2)
+
+sqrt_space = " " * next(map(int, SQRT_SYM.split(":", 1)[1:]), 1)
+SQRT_SYM = SQRT_SYM.split(":", maxsplit=1)[0]
+
+def digitc(n: int) -> int:
+    return floor(log10(n or 1)) + 1
+
+
+def dot_int(n: int, d: int = 0) -> str:
+    if d < 0:
+        return str(n)
+
+    d = max(d+1, 0)
+    p = 10 ** d
+    nd = digitc(n) + 1
+    s = f"{'0'*(d-nd)}{n % p}"
+    return f"{n // p}.{'0'*(d-len(s))}{s}"
+
+
+def to(prefix: int, target: int, end: int = 9) -> int:
+    prefix *= 10
+    result = None
+
+    for n in range(0, end + 1):
+        if (prefix + n) * n > target:
+            break
+        result = n
+
+    n = result
+    result += prefix
+
+    return result*n, n
+
+
+def printed_sqrt(num: float, digits: int = 4) -> int:
+    assert num >= 0, f"{num=} < 0"
+
+    fill = digits * 2
+    n = int(num * 10 ** fill)
+    filled_digits = digitc(n)
+    based_indent = filled_digits // 2 + 5
+
+    diff = 0
+    result = 0
+    align_indent = ''
+    dot_index = floor(-digitc(num)/2)
+    print(rf"{'-'*based_indent}\{SQRT_SYM}{n}")
+
+    for i in reversed(range(0, filled_digits, 2)):
+        group = n // 10 ** i % 100 # dec shift
+        group += diff
+        down_prefix = result*2
+        cur, cur_digit = to(down_prefix, group)
+        result = result*10 + cur_digit
+        diff = (group - cur) * 100
+
+        if not (diff or cur or n % 10 ** i):
+            result *= 10 ** (i // 2)
+            break
+
+        group_s, cur_s = str(group), str(cur)
+        sep = align_indent and " "*(len(group_s) == 1)
+        glen = len(group_s) + bool(sep)
+        result_s = '> ' + dot_int(result, dot_index)
+        dot_index += 1
+
+        show_prefix = f"{down_prefix or ''}{cur_digit}*{cur_digit}"
+        l1_indent = show_prefix + ' '*(based_indent - len(show_prefix))
+        l2_indent = result_s + ' '*(based_indent - len(result_s))
+        l2_content = " "*(glen-len(cur_s)) + cur_s
+        print(f"{l1_indent}|{align_indent}{sep}{SQRT_SYM}"
+              f"{group_s}")
+        print(f"{l2_indent}|{align_indent}{sqrt_space}"
+              f"{l2_content}")
+
+        align_indent += " "*(glen - len(str(diff // 100 or '')))
+
+    print(f"{'-'*based_indent}/")
+    print(f"{SQRT_SYM}{num} = {dot_int(result, digits-1)}")
+    return result
+
+
+for i, num in enumerate(args):
+    i and print()
+
+    try:
+        num = int(num)
+    except ValueError:
+        try:
+            num = float(num)
+        except ValueError as e:
+            print(f"{argv[0]}: {e}", file=stderr)
+            exit(2)
+
+    printed_sqrt(num, digits=DIGITS)
