@@ -60,6 +60,15 @@ def dot_int(n: int, d: int = 0) -> str:
     return f"{n // p}.{'0'*(d-len(s))}{s}"
 
 
+def parse_dot_int(s: str) -> tuple[int, int]:
+    s = s.rstrip(".")
+    if s.find(".") == -1:
+        return int(s), -1
+
+    norm, part = s.split(".", 1)
+    return int(norm+part), len(part) - 1
+
+
 def to(prefix: int, target: int, end: int = 9) -> int:
     prefix *= 10
     result = None
@@ -75,10 +84,10 @@ def to(prefix: int, target: int, end: int = 9) -> int:
     return result*n, n
 
 
-def printed_sqrt(num: float, digits: int = 4) -> int:
+def printed_sqrt(num: int, digits: int = 4, dot: int = -1) -> int:
     assert num >= 0, f"{num=} < 0"
 
-    fill = digits * 2
+    fill = digits * 2 - (dot+1)
     n = int(num * 10 ** fill)
     filled_digits = digitc(n)
     based_indent = filled_digits // 2 + 5
@@ -86,7 +95,7 @@ def printed_sqrt(num: float, digits: int = 4) -> int:
     diff = 0
     result = 0
     align_indent = ''
-    dot_index = floor(-digitc(num)/2)
+    dot_index = floor(-(digitc(num) - (dot+1))/2)
     print(rf"{'-'*based_indent}\{SQRT_SYM}{n}")
 
     for i in reversed(range(0, filled_digits, 2)):
@@ -119,20 +128,24 @@ def printed_sqrt(num: float, digits: int = 4) -> int:
         align_indent += " "*(glen - len(str(diff // 100 or '')))
 
     print(f"{'-'*based_indent}/")
-    print(f"{SQRT_SYM}{num} = {dot_int(result, digits-1)}")
+    print(f"{SQRT_SYM}{dot_int(num, dot)} = {dot_int(result, digits-1)}")
     return result
 
 
-for i, num in enumerate(args):
-    i and print()
+parsed_args = []
 
+for num in args:
     try:
-        num = int(num)
-    except ValueError:
-        try:
-            num = float(num)
-        except ValueError as e:
-            print(f"{argv[0]}: {e}", file=stderr)
-            exit(2)
+        num, dot = parse_dot_int(num)
+    except ValueError as e:
+        print(f"{argv[0]}: {e}", file=stderr)
+        exit(2)
 
-    printed_sqrt(num, digits=DIGITS)
+    parsed_args.append((num, dot))
+
+
+for i, (num, dot) in enumerate(parsed_args):
+    if i:
+        print()
+
+    printed_sqrt(num, digits=DIGITS, dot=dot)
