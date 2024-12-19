@@ -16,15 +16,18 @@ Automatic calculation of manual square root steps.
 Options:
     -s, --sqrt=<s>      Set sqrt symbol, e.g `/^:2` is uses `/^` and 2 en width
     -d, --digit=<n>     Set the exact number of decimal places
+    -r, --resquare      Show the square of the result
     -h, --help          Show this help message
 """
 
 SQRT_SYM = "√"
 DIGITS = 4
+RE_SQUARE = False
 
-opts, args = gnu_getopt(argv[1:], 's:d:h', longopts=[
+opts, args = gnu_getopt(argv[1:], 's:d:rh', longopts=[
     "sqrt=",
     "digit=",
+    "resquare",
     "help",
 ])
 
@@ -41,6 +44,8 @@ for opt, value in opts:
             except ValueError as e:
                 print(f"{argv[0]}: {e}", file=stderr)
                 exit(2)
+        case "-r" | "--resquare":
+            RE_SQUARE = True
 
 sqrt_space = " " * next(map(int, SQRT_SYM.split(":", 1)[1:]), 1)
 SQRT_SYM = SQRT_SYM.split(":", maxsplit=1)[0]
@@ -128,7 +133,12 @@ def printed_sqrt(num: int, digits: int = 4, dot: int = -1) -> int:
         align_indent += " "*(glen - len(str(diff // 100 or '')))
 
     print(f"{'-'*based_indent}/")
-    print(f"{SQRT_SYM}{dot_int(num, dot)} = {dot_int(result, digits-1)}")
+
+    repow = result**2
+    eqsym = "=" if repow == n else "≈"
+    if RE_SQUARE:
+        print(f"{SQRT_SYM}{dot_int(repow, digits*2-1)}")
+    print(f"{SQRT_SYM}{dot_int(num, dot)} {eqsym} {dot_int(result, digits-1)}")
     return result
 
 
