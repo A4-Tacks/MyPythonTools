@@ -3,7 +3,7 @@
 """使用编辑器批量重命名的小工具, 比shell实现更快"""
 
 from sys import argv, stderr, exit
-from os import replace, remove, getenv
+from os import replace, remove, getenv, isatty
 from collections.abc import Iterable
 from getopt import gnu_getopt, GetoptError
 from tempfile import mkstemp
@@ -15,13 +15,14 @@ ENCODING = "utf-8"
 VERBOSE = False
 RS = "\n"
 EDITOR = getenv("EDITOR") or "vim"
+ARROW = "\x1b[1;32m->\x1b[m" if isatty(1) else "->"
 HELP_MSG = """\
 Usage: editor-mv [Options] <FILE>...
 Use the $EDITOR to batch edit the path of mv
 
 Options:
-    -v                 verbose mode
-    -h                 show help
+    -v, --verbose      verbose mode
+    -h, --help         show help
 """
 
 try:
@@ -83,7 +84,7 @@ def main(files: list[str]) -> None:
             print(e, file=stderr)
 
         if VERBOSE:
-            print(f"{quote(src)}  ->  {quote(dst)}")
+            print(f"{quote(src)} {ARROW} {quote(dst)}")
 
 
 _, tmp = mkstemp(prefix="editor-mv.")
