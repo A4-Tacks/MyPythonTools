@@ -1,0 +1,95 @@
+#!/usr/bin/python3
+# -*- coding: utf-8; -*-
+"""使用编辑器批量重命名的小工具, 比shell实现更快"""
+
+from sys import argv, stderr, exit
+from os import replace, remove, getenv
+from collections.abc import Iterable
+from getopt import gnu_getopt, GetoptError
+from tempfile import mkstemp
+from subprocess import run
+from shlex import quote
+
+EXIT_CODE = 0
+ENCODING = "utf-8"
+VERBOSE = False
+RS = "\n"
+EDITOR = getenv("EDITOR") or "vim"
+HELP_MSG = """\
+Usage: editor-mv [Options] <FILE>...
+Use the $EDITOR to batch edit the path of mv
+
+Options:
+    -v                 verbose mode
+    -h                 show help
+"""
+
+try:
+    opts, args = gnu_getopt(argv[1:], "hv", longopts=[
+        "--help",
+        "--verbose",
+    ])
+except GetoptError as e:
+    print(f"ParseArg: {e}", file=stderr)
+    exit(2)
+
+for opt, value in opts:
+    match opt:
+        case "-h" | "--help":
+            print(end=HELP_MSG)
+            exit()
+        case "-v" | "--verbose":
+            VERBOSE = True
+
+if not args:
+    print(f"ParseArg: FILE count by zero", file=stderr)
+    exit(2)
+
+def edit_names(files: list[str], clear=True) -> Iterable[tuple[str, str]]:
+    if clear:
+        with open(tmp, "w", encoding=ENCODING) as file:
+            print(*args, sep=RS, end=RS, file=file, flush=True)
+
+    if code := run([EDITOR, "--", tmp], check=False).returncode:
+        print(f"editor failed exit [code: {code}]", file=stderr)
+        exit(3)
+
+    with open(tmp, encoding=ENCODING) as file:
+        dst_files = list(map(lambda s: s.rstrip("\r\n"), file.readlines()))
+
+    if len(dst_files) != len(files):
+        inp = input(f"input {len(files)} files, "
+                    f"output {len(dst_files)} files, re edit?\n"
+                    f"enter is re edit, c is continue edit, other is exit.\n"
+                    f"> ").strip()
+        if inp not in ["", "c"]:
+            exit(4)
+        return edit_names(files, clear=inp != "c")
+
+    return zip(files, dst_files)
+
+
+def main(files: list[str]) -> None:
+    global EXIT_CODE
+
+    for src, dst in edit_names(files):
+        if src == dst:
+            continue
+
+        try:
+            replace(src, dst)
+        except OSError as e:
+            EXIT_CODE = e.errno
+            print(e, file=stderr)
+
+        if VERBOSE:
+            print(f"{quote(src)}  ->  {quote(dst)}")
+
+
+_, tmp = mkstemp(prefix="editor-mv.")
+try:
+    main(args)
+finally:
+    remove(tmp)
+
+exit(EXIT_CODE)
