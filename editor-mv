@@ -51,9 +51,10 @@ def edit_names(files: list[str], clear=True) -> Iterable[tuple[str, str]]:
         with open(tmp, "w", encoding=ENCODING) as file:
             print(*args, sep=RS, end=RS, file=file, flush=True)
 
-    if code := run([EDITOR, "--", tmp], check=False).returncode:
-        print(f"editor failed exit [code: {code}]", file=stderr)
-        exit(3)
+    with (open("/dev/tty", "br") as rtty, open("/dev/tty", "bw") as wtty):
+        if code := run([EDITOR, "--", tmp], check=False, stdin=rtty, stdout=wtty, stderr=wtty).returncode:
+            print(f"editor failed exit [code: {code}]", file=stderr)
+            exit(3)
 
     with open(tmp, encoding=ENCODING) as file:
         dst_files = list(map(lambda s: s.rstrip("\r\n"), file.readlines()))
