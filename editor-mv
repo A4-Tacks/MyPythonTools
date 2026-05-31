@@ -28,9 +28,9 @@ Options:
 
 try:
     opts, args = gnu_getopt(argv[1:], "l:hv", longopts=[
-        "--listdir",
-        "--help",
-        "--verbose",
+        "listdir=",
+        "help",
+        "verbose",
     ])
 except GetoptError as e:
     print(f"ParseArg: {e}", file=stderr)
@@ -40,7 +40,9 @@ for opt, value in opts:
     match opt:
         case "-l" | "--listdir":
             names = listdir(value)
-            args.extend(map(lambda name:path.join(value, name), names))
+            if value and value != '.':
+                names = map(lambda name:path.join(value, name), names)
+            args.extend(names)
         case "-h" | "--help":
             print(end=HELP_MSG)
             exit()
