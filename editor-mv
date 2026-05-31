@@ -3,7 +3,7 @@
 """使用编辑器批量重命名的小工具, 比shell实现更快"""
 
 from sys import argv, stderr, exit
-from os import replace, remove, getenv, isatty
+from os import replace, remove, getenv, isatty, listdir, path
 from collections.abc import Iterable
 from getopt import gnu_getopt, GetoptError
 from tempfile import mkstemp
@@ -21,12 +21,14 @@ Usage: editor-mv [Options] <FILE>...
 Use the $EDITOR to batch edit the path of mv
 
 Options:
+    -l, --listdir=dir  collect dir files to arguments
     -v, --verbose      verbose mode
     -h, --help         show help
 """
 
 try:
-    opts, args = gnu_getopt(argv[1:], "hv", longopts=[
+    opts, args = gnu_getopt(argv[1:], "l:hv", longopts=[
+        "--listdir",
         "--help",
         "--verbose",
     ])
@@ -36,6 +38,9 @@ except GetoptError as e:
 
 for opt, value in opts:
     match opt:
+        case "-l" | "--listdir":
+            names = listdir(value)
+            args.extend(map(lambda name:path.join(value, name), names))
         case "-h" | "--help":
             print(end=HELP_MSG)
             exit()
