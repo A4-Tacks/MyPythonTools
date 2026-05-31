@@ -16,7 +16,7 @@
 #include <conio.h>
 #define __useconds_t useconds_t
 #else
-#include <termio.h>
+#include <termios.h>
 extern void cfmakeraw (struct termios *__termios_p) __THROW;
 static pthread_mutex_t GETCH_OLD_LOCK = PTHREAD_MUTEX_INITIALIZER;
 static atomic_bool GETCH_TERM_SETTED = false;
