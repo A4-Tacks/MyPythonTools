@@ -60,6 +60,7 @@ with open(file, encoding=encoding) as file:
 
     for line in file:
         is_title = not line.startswith(" ") and not line.startswith("　") and line.strip(ws)
+        is_title = is_title and len(current) > 2
 
         if is_title:
             if current:
