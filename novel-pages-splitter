@@ -81,7 +81,10 @@ while len(pages) > chunk_size:
 def name_of(it) -> str:
     if isinstance(it, list):
         return name_of(it[0])
-    return it.strip()
+    pure = re.sub(r"/", "|", it.strip())
+    kind = re.sub(r"(?:(章)|[,.，。？！?!…]).*", lambda x:x[1], pure)
+    kind = re.sub(r"^第| ", "", kind)
+    return kind[:6]
 
 def build(it, prefix):
     is_leaf = isinstance(it[0], str)
@@ -95,6 +98,6 @@ def build(it, prefix):
     makedirs(prefix, exist_ok=True)
 
     for i, elem in enumerate(it, 1):
-        build(elem, path.join(prefix, f"{i:02}-{name_of(elem)}"))
+        build(elem, path.join(prefix, f"{i:02} {name_of(elem)}"))
 
 build(pages, dirpath)
