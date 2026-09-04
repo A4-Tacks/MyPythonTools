@@ -1,0 +1,100 @@
+#!/usr/bin/python3
+# -*- coding: utf-8; -*-
+
+from sys import stderr, exit, argv
+import getopt
+import re
+from os import path, makedirs
+
+HELP_MSG = """\
+Usage: novel-pages-splitter [Options] <FILE>
+将规范化后的小说格式, 分章创建目录树, 方便通过某些劣质无法跳转的阅读器来阅读
+
+Options:
+    -c, --chunk-size=num    files indexes chunk size
+    -l, --leaf-size=num     leaf files included page count
+    -e, --encoding=?        source file encoding
+    -h, --help              show help
+"""
+
+try:
+    opts, args = getopt.gnu_getopt(argv[1:], "c:l:e:h", longopts=[
+        "chunk-size=",
+        "leaf-size=",
+        "encoding=",
+        "help",
+    ])
+except getopt.GetoptError as e:
+    print(f"ParseArg: {e}", file=stderr)
+    exit(2)
+
+encoding = "utf-8"
+chunk_size = 8
+leaf_size = 3
+
+for opt, value in opts:
+    match opt:
+        case "-l" | "--leaf-size":
+            leaf_size = int(value)
+            assert leaf_size > 0, leaf_size
+        case "-c" | "--chunk-size":
+            chunk_size = int(value)
+            assert chunk_size > 0, chunk_size
+        case "-e" | "--encoding":
+            encoding = value
+        case "-h" | "--help":
+            print(end=HELP_MSG)
+            exit()
+
+[file] = args
+dirpath = re.sub(r"\.txt$", "", file)
+assert dirpath + ".txt" == file, file
+
+[_, name] = path.split(dirpath)
+assert name != ""
+
+with open(file, encoding=encoding) as file:
+    pages = []
+    current = []
+
+    for line in file:
+        is_title = not line.startswith(" ") and not line.startswith("　") and line.strip(" \r\n　")
+
+        if is_title:
+            if current:
+                pages.append(current)
+                current = []
+
+        current.append(line)
+
+    if current:
+        pages.append(current)
+
+
+for i in reversed(range(0, len(pages), leaf_size)):
+    pages[i:i+leaf_size] = [[j for i in pages[i:i+leaf_size] for j in i]]
+
+while len(pages) > chunk_size:
+    for i in reversed(range(0, len(pages), chunk_size)):
+        pages[i:i+chunk_size] = [pages[i:i+chunk_size]]
+
+def name_of(it) -> str:
+    if isinstance(it, list):
+        return name_of(it[0])
+    return it.strip()
+
+def build(it, prefix):
+    is_leaf = isinstance(it[0], str)
+
+    if is_leaf:
+        leaf_path = prefix + ".txt"
+        with open(leaf_path, "w", encoding=encoding) as file:
+            file.writelines(it)
+        return
+
+    makedirs(prefix, exist_ok=True)
+
+    for i, elem in enumerate(it, 1):
+        build(elem, path.join(prefix, f"{i:02}-{name_of(elem)}"))
+
+build(pages, dirpath)
