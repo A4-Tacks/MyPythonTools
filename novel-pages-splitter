@@ -31,6 +31,7 @@ except getopt.GetoptError as e:
 encoding = "utf-8"
 chunk_size = 8
 leaf_size = 3
+ws = " \r\n　"
 
 for opt, value in opts:
     match opt:
@@ -58,7 +59,7 @@ with open(file, encoding=encoding) as file:
     current = []
 
     for line in file:
-        is_title = not line.startswith(" ") and not line.startswith("　") and line.strip(" \r\n　")
+        is_title = not line.startswith(" ") and not line.startswith("　") and line.strip(ws)
 
         if is_title:
             if current:
@@ -81,7 +82,7 @@ while len(pages) > chunk_size:
 def name_of(it) -> str:
     if isinstance(it, list):
         return name_of(it[0])
-    pure = re.sub(r"/", "|", it.strip())
+    pure = re.sub(r"/", "|", it.strip(ws))
     kind = re.sub(r"(?:(章)|[,.，。？！?!…]).*", lambda x:x[1], pure)
     kind = re.sub(r"^第| ", "", kind)
     return kind[:6]
