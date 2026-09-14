@@ -54,6 +54,10 @@ assert dirpath + ".txt" == file, file
 [_, name] = path.split(dirpath)
 assert name != ""
 
+if path.exists(dirpath):
+    class OutputToExistsPath(Exception): ...
+    raise OutputToExistsPath(repr(dirpath))
+
 with open(file, encoding=encoding) as file:
     pages = []
     current = []
